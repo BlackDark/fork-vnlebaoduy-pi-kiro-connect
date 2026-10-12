@@ -4,6 +4,7 @@
 
 import type { Api, Model, OAuthCredentials, RefreshModelsContext } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import { formatSafeError } from "./debug.js";
 import { getKiroEndpoints, resolveApiRegion } from "./endpoints.js";
 import { loadKiroFooterConfig } from "./footer.js";
@@ -11,6 +12,7 @@ import { registerKiroUsageFooter } from "./footer-lifecycle.js";
 import { getKiroCliCredentials, getKiroCliSocialToken } from "./kiro-cli.js";
 import { getKiroIdeCredentials } from "./kiro-ide.js";
 import { setExtensionContext } from "./login-ui.js";
+import { resolveKiroProfileArn } from "./management.js";
 import { getCachedModels, isCacheStale, type KiroModel, kiroModels, updateKiroModelsCache } from "./models.js";
 import type { KiroCredentials } from "./oauth.js";
 import { loginKiro, refreshKiroToken } from "./oauth.js";
@@ -19,6 +21,7 @@ import { getPiHostKiroCredentials } from "./pi-auth-store.js";
 import { createKiroStream } from "./stream.js";
 import { fetchKiroUsage } from "./usage.js";
 import { loadKiroUsageTracking } from "./usage-tracking.js";
+import { invokeKiroWebSearch } from "./web-search.js";
 
 export { resolveApiRegion } from "./endpoints.js";
 export type { KiroProviderAttempts } from "./errors.js";
@@ -172,6 +175,38 @@ export function whenStartupCatalogSettled(): Promise<void> {
  * kicked off afterwards and the host's `refreshModels` hook fills in the rest;
  * OMP drives discovery itself through `fetchDynamicModels`.
  */
+/**
+ * Registers `kiro_web_search`, backed by Kiro's InvokeMCP operation (not
+ * generateAssistantResponse). Named `kiro_` to avoid colliding with other
+ * web-search extensions. No-op if `registerTool` isn't available on the host.
+ */
+function registerKiroWebSearchTool(pi: ExtensionAPI): void {
+  if (typeof pi.registerTool !== "function") return;
+  pi.registerTool({
+    name: "kiro_web_search",
+    label: "Kiro Web Search",
+    description:
+      "Search the web for current information via Kiro. Use for facts, docs, or events outside training data.",
+    promptSnippet: "Search the web for current information (Kiro)",
+    parameters: Type.Object({
+      query: Type.String({ description: "The search query to execute. Must be 200 characters or less." }),
+    }),
+    async execute(_toolCallId, params) {
+      const credential = resolveOAuthCredential();
+      if (!credential?.access) {
+        throw new Error("Kiro web_search requires a signed-in Kiro account.");
+      }
+      const region = credentialRegion(credential as KiroRefreshCredential);
+      const profileArn = await resolveKiroProfileArn({ accessToken: credential.access, region });
+      const results = await invokeKiroWebSearch({ accessToken: credential.access, region, profileArn }, params.query);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify({ results }, null, 2) }],
+        details: { query: params.query, resultCount: results.length },
+      };
+    },
+  });
+}
+
 export default function (pi: ExtensionAPI) {
   // Capture ctx for the custom TUI login component
   pi.on("session_start", async (_event, ctx) => {
@@ -244,6 +279,8 @@ export default function (pi: ExtensionAPI) {
     } as any,
     streamSimple,
   } as Parameters<ExtensionAPI["registerProvider"]>[1]);
+
+  registerKiroWebSearchTool(pi);
 
   if (omp) return;
   const credential = resolveLocalCredential();
