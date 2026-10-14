@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- kiro-cli Builder ID sessions (no `profile_arn` in the token row) now resolve the fixed Builder ID profile, keyed on the `view.awsapps.com` start URL. A real SSO account's `profileArn` is never overridden.
+
 ### Changed
 
 - Honor the explicit `KIRO_PROFILE_ARN` override before a profile projected into model metadata, so switching Kiro accounts does not keep sending requests with a stale model profile.

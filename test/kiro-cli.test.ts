@@ -15,6 +15,7 @@ import {
   tryKiroCliToken,
 } from "../src/kiro-cli.js";
 import type { KiroCredentials } from "../src/oauth.js";
+import { BUILDER_ID_PROFILE_ARN, BUILDER_ID_START_URL } from "../src/oauth.js";
 
 // Real by default; the write-back tests point the kiro-cli DB lookup at a temp home.
 vi.mock("node:os", async (importOriginal) => {
@@ -54,6 +55,48 @@ function makeTokenDb(profileArn?: string, authMethod: "idc" | "desktop" = "idc")
   db.close();
   return dbPath;
 }
+
+describe("Builder ID profileArn fallback (#169)", () => {
+  function makeDb(extra: Record<string, unknown>): string {
+    tempDir = mkdtempSync(join(tmpdir(), "kiro-cli-test-"));
+    const dbPath = join(tempDir, "data.sqlite3");
+    const db = new DatabaseSync(dbPath);
+    db.exec(`CREATE TABLE auth_kv (key TEXT PRIMARY KEY, value TEXT)`);
+    db.prepare(`INSERT INTO auth_kv (key, value) VALUES (?, ?)`).run(
+      "kirocli:social:token",
+      JSON.stringify({
+        access_token: "a",
+        refresh_token: "r",
+        region: "us-east-1",
+        expires_at: new Date(Date.now() + 3600000).toISOString(),
+        ...extra,
+      }),
+    );
+    db.close();
+    return dbPath;
+  }
+
+  it("falls back to the Builder ID profile when the row has none", () => {
+    const result = tryKiroCliToken(makeDb({ start_url: BUILDER_ID_START_URL }), "kirocli:social:token", "desktop");
+    expect(result?.profileArn).toBe(BUILDER_ID_PROFILE_ARN);
+    expect(result?.startUrl).toBe(BUILDER_ID_START_URL);
+  });
+
+  it("never overrides an explicit profile ARN", () => {
+    const arn = "arn:aws:codewhisperer:eu-central-1:123456789012:profile/sso";
+    const result = tryKiroCliToken(
+      makeDb({ start_url: BUILDER_ID_START_URL, profile_arn: arn }),
+      "kirocli:social:token",
+      "desktop",
+    );
+    expect(result?.profileArn).toBe(arn);
+  });
+
+  it("leaves profileArn unset without a Builder ID start_url", () => {
+    const result = tryKiroCliToken(makeDb({}), "kirocli:social:token", "desktop");
+    expect(result?.profileArn).toBeUndefined();
+  });
+});
 
 describe("tryKiroCliToken (#110)", () => {
   it("carries profile_arn through the IDC token path", () => {
