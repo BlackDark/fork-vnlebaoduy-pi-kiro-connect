@@ -114,7 +114,7 @@ describe("Feature 3: OAuth — Token Refresh", () => {
       } as KiroCredentials);
 
       expect(creds.access).toBe("idp_at");
-      expect(creds.refresh).toBe(`idp_rt2|0oaEXAMPLE|${tokenEndpoint}|external-idp`);
+      expect(creds.refresh).toBe(`idp_rt2|0oaEXAMPLE|${tokenEndpoint}|external-idp|us-east-1`);
       expect((creds as KiroCredentials).authMethod).toBe("external-idp");
       expect((creds as KiroCredentials).clientSecret).toBe("");
 
@@ -142,7 +142,23 @@ describe("Feature 3: OAuth — Token Refresh", () => {
         access: "old",
         expires: 0,
       } as KiroCredentials);
-      expect(creds.refresh).toBe("idp_rt|cid|https://idp.example/token|external-idp");
+      expect(creds.refresh).toBe("idp_rt|cid|https://idp.example/token|external-idp|us-east-1");
+      vi.unstubAllGlobals();
+    });
+
+    it("refreshes an IdC credential against the region persisted in the refresh string", async () => {
+      const fetchMock = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ accessToken: "at", refreshToken: "rt2", expiresIn: 3600 }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const creds = await refreshKiroToken({
+        refresh: "rt|cid|sec|idc|eu-west-1",
+        access: "old",
+        expires: 0,
+      } as KiroCredentials);
+      expect(fetchMock.mock.calls[0][0]).toBe("https://oidc.eu-west-1.amazonaws.com/token");
+      expect(creds.refresh).toBe("rt2|cid|sec|idc|eu-west-1");
       vi.unstubAllGlobals();
     });
 

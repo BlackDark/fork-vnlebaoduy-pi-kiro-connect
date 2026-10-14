@@ -62,9 +62,10 @@ HTTP 429 is provider-retried only when its JSON `reason` is exactly `USER_REQUES
 2. OAuth device code flow (interactive, opens browser)
 
 ### Auth Methods
-- `idc`: AWS Builder ID or IAM Identity Center (SSO). Refresh via SSO OIDC endpoint. Token format: `refreshToken|clientId|clientSecret|idc`. Preferred — has clientId/clientSecret for refresh.
-- `desktop`: Google/GitHub social login via Kiro auth service. Refresh via `prod.{region}.auth.desktop.kiro.dev`. Token format: `refreshToken|desktop`
-- `external-idp`: Enterprise OIDC IdP (e.g. Okta) configured by the org, established by `kiro-cli login`. Refresh is a public-client `refresh_token` grant against the tenant's own `token_endpoint` (form-encoded, snake_case response, no client secret). Token format: `refreshToken|clientId|tokenEndpoint|external-idp`. Requests **must** carry `tokentype: EXTERNAL_IDP` or Kiro answers 403 "Invalid token" — see `src/token-type.ts`.
+The refresh string is parsed/encoded only via `src/refresh-token.ts`; the optional trailing region survives pi's persistence (which keeps just `access`/`refresh`/`expires`).
+- `idc`: AWS Builder ID or IAM Identity Center (SSO). Refresh via SSO OIDC endpoint. Token format: `refreshToken|clientId|clientSecret|idc[|region]`. Preferred — has clientId/clientSecret for refresh.
+- `desktop`: Google/GitHub social login via Kiro auth service. Refresh via `prod.{region}.auth.desktop.kiro.dev`. Token format: `refreshToken|desktop[|region]`
+- `external-idp`: Enterprise OIDC IdP (e.g. Okta) configured by the org, established by `kiro-cli login`. Refresh is a public-client `refresh_token` grant against the tenant's own `token_endpoint` (form-encoded, snake_case response, no client secret). Token format: `refreshToken|clientId|tokenEndpoint|external-idp[|region]`. Requests **must** carry `tokentype: EXTERNAL_IDP` or Kiro answers 403 "Invalid token" — see `src/token-type.ts`.
 
 ### Login Methods
 Users can authenticate via:
