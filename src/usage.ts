@@ -4,10 +4,11 @@
 import { resolveApiRegion } from "./endpoints.js";
 import { getUsageLimits, type KiroManagementAuth, resolveKiroProfileArn } from "./management.js";
 import type { KiroCredentials } from "./oauth.js";
+import { kiroCredentialRegion } from "./refresh-token.js";
 
 /** Fields usage lookup reads; any OAuth credential (Pi's or OMP's projection) satisfies it. */
 export type KiroUsageCredential = Pick<KiroCredentials, "access"> &
-  Partial<Pick<KiroCredentials, "region" | "profileArn">>;
+  Partial<Pick<KiroCredentials, "region" | "profileArn" | "refresh">>;
 
 const MANAGE_USAGE_URL = "https://app.kiro.dev/account/usage";
 
@@ -164,7 +165,7 @@ async function fetchRawUsage(auth: KiroManagementAuth, profileArn?: string): Pro
 export async function fetchKiroUsage(credentials: KiroUsageCredential): Promise<KiroProviderUsage> {
   const auth = {
     accessToken: credentials.access,
-    region: resolveApiRegion(credentials.region),
+    region: resolveApiRegion(kiroCredentialRegion(credentials)),
   };
   const raw = await fetchRawUsage(auth, credentials.profileArn);
   const usageBuckets = raw.usageBreakdownList?.length

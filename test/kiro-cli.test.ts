@@ -165,7 +165,7 @@ describe("saveKiroCliCredentials", () => {
     saveKiroCliCredentials(cliClientCreds);
     const stored = tryKiroCliToken(dbPath, "kirocli:odic:token", "idc");
     expect(stored?.access).toBe("new-access");
-    expect(stored?.refresh).toBe("new-refresh|cli-client|cli-secret|idc");
+    expect(stored?.refresh).toBe("new-refresh|cli-client|cli-secret|idc|ap-southeast-1");
   });
 
   it("leaves kiro-cli's IDC token alone when the refresh token belongs to another client", () => {
@@ -175,7 +175,7 @@ describe("saveKiroCliCredentials", () => {
     saveKiroCliCredentials({ ...cliClientCreds, refresh: "new-refresh|pi-client|secret|idc", clientId: "pi-client" });
     const stored = tryKiroCliToken(dbPath, "kirocli:odic:token", "idc", true);
     expect(stored?.access).toBe("cli-access");
-    expect(stored?.refresh).toBe("cli-refresh|cli-client|cli-secret|idc");
+    expect(stored?.refresh).toBe("cli-refresh|cli-client|cli-secret|idc|ap-southeast-1");
   });
 });
 
@@ -211,7 +211,7 @@ describe("saveKiroCliIdcSession", () => {
     expect(getKiroCliIdcRegistration("us-east-1")).toBeUndefined();
     expect(getKiroCliIdcLogin()).toEqual({ startUrl: "https://example.awsapps.com/start", region: "ap-southeast-1" });
     const token = tryKiroCliToken(dbPath, "kirocli:odic:token", "idc");
-    expect(token?.refresh).toBe("rt|cid|it's-secret|idc");
+    expect(token?.refresh).toBe("rt|cid|it's-secret|idc|ap-southeast-1");
     expect(token?.region).toBe("ap-southeast-1");
   });
 });
@@ -261,7 +261,7 @@ describe("external IdP tokens", () => {
     });
     const result = tryKiroCliToken(dbPath, "kirocli:external-idp:token", "external-idp");
     expect(result?.refresh).toBe(
-      "idp-refresh|0oaEXAMPLE|https://example.okta.com/oauth2/default/v1/token|external-idp",
+      "idp-refresh|0oaEXAMPLE|https://example.okta.com/oauth2/default/v1/token|external-idp|us-east-1",
     );
   });
 

@@ -300,7 +300,7 @@ describe("Feature 10: Interactive Login", () => {
       const urls = mockFetch.mock.calls.map(([url]) => String(url));
       expect(urls.some((url) => url.endsWith("/client/register"))).toBe(false);
       expect(JSON.parse(mockFetch.mock.calls[0][1].body).clientId).toBe("cli-cid");
-      expect(creds.refresh).toBe("rt|cli-cid|cli-sec|idc");
+      expect(creds.refresh).toBe("rt|cli-cid|cli-sec|idc|us-east-1");
       expect(kiroCli.saveKiroCliIdcSession).toHaveBeenCalledWith(
         expect.objectContaining({
           registration,

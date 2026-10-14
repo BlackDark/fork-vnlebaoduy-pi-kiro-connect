@@ -34,6 +34,7 @@ import {
   loginKiroWithApiKey,
   SSO_SCOPES,
 } from "./oauth.js";
+import { encodeKiroRefresh } from "./refresh-token.js";
 
 const oidcHeaders = (): Record<string, string> => ({
   "Content-Type": "application/json",
@@ -310,7 +311,12 @@ async function pollDeviceCode(
             scopes: SSO_SCOPES,
           });
           return {
-            refresh: `${tokData.refreshToken}|${clientId}|${clientSecret}|idc`,
+            refresh: encodeKiroRefresh({
+              token: tokData.refreshToken,
+              fields: [clientId, clientSecret],
+              authMethod: "idc",
+              region,
+            }),
             access: tokData.accessToken,
             expires: expiresAt - 5 * 60 * 1000,
             clientId,
@@ -493,7 +499,7 @@ export async function runSocialLoginFlow(
         }
 
         const creds = {
-          refresh: `${data.refreshToken || ""}|desktop`,
+          refresh: encodeKiroRefresh({ token: data.refreshToken || "", fields: [], authMethod: "desktop", region }),
           access: data.accessToken,
           expires: Date.now() + data.expiresIn * 1000 - 5 * 60 * 1000,
           clientId: "",

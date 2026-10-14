@@ -18,6 +18,7 @@ import type { KiroCredentials } from "./oauth.js";
 import { loginKiro, refreshKiroToken } from "./oauth.js";
 import { kiroOmpUsageProvider } from "./omp-usage.js";
 import { getPiHostKiroCredentials } from "./pi-auth-store.js";
+import { kiroCredentialRegion } from "./refresh-token.js";
 import { createKiroStream } from "./stream.js";
 import { fetchKiroUsage } from "./usage.js";
 import { loadKiroUsageTracking } from "./usage-tracking.js";
@@ -107,7 +108,7 @@ function resolveOAuthCredential(): OAuthCredentials | undefined {
 
 function credentialRegion(credential: KiroRefreshCredential): string {
   const oauthCredential = credential && "access" in credential ? (credential as KiroCredentials) : undefined;
-  return resolveApiRegion(oauthCredential?.region);
+  return resolveApiRegion(kiroCredentialRegion(oauthCredential));
 }
 
 async function refreshCatalog(
@@ -261,7 +262,7 @@ export default function (pi: ExtensionAPI) {
       getCliCredentials: getKiroCliCredentials,
       modifyModels: (models: Model<Api>[], cred: OAuthCredentials) => {
         oauthForCatalog = cred as KiroCredentials;
-        const apiRegion = resolveApiRegion((cred as KiroCredentials).region);
+        const apiRegion = resolveApiRegion(kiroCredentialRegion(cred));
         const cachedKiro = getCachedModels(apiRegion);
         const nonKiro = models.filter((m: Model<Api>) => m.provider !== "kiro");
         const credentialProfileArn = (cred as KiroCredentials).profileArn;

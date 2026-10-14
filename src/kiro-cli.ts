@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { formatSafeError } from "./debug.js";
 import type { KiroAuthMethod, KiroCredentials } from "./oauth.js";
 import { BUILDER_ID_PROFILE_ARN, BUILDER_ID_START_URL } from "./oauth.js";
+import { encodeKiroRefresh, parseKiroRefresh } from "./refresh-token.js";
 
 const require = createRequire(import.meta.url);
 
@@ -161,7 +162,7 @@ function tryKiroCliToken(
     const startUrl: string | undefined = typeof tokenData.start_url === "string" ? tokenData.start_url : undefined;
     const isBuilderId = startUrl === BUILDER_ID_START_URL || startUrl?.includes("view.awsapps.com") === true;
     return {
-      refresh: `${tokenData.refresh_token}|desktop`,
+      refresh: encodeKiroRefresh({ token: tokenData.refresh_token, fields: [], authMethod: "desktop", region }),
       access: tokenData.access_token,
       expires: expiresAt,
       clientId: "",
@@ -184,7 +185,12 @@ function tryKiroCliToken(
       tokenData.tokenEndpoint ||
       (issuerUrl ? `${issuerUrl.replace(/\/+$/, "")}/v1/token` : "");
     return {
-      refresh: `${tokenData.refresh_token}|${idpClientId}|${tokenEndpoint}|external-idp`,
+      refresh: encodeKiroRefresh({
+        token: tokenData.refresh_token,
+        fields: [idpClientId, tokenEndpoint],
+        authMethod: "external-idp",
+        region,
+      }),
       access: tokenData.access_token,
       expires: expiresAt,
       clientId: idpClientId,
@@ -198,7 +204,12 @@ function tryKiroCliToken(
   // IDC — need device registration credentials for refresh
   const { clientId, clientSecret } = readDeviceRegistration(dbPath, tokenKey) ?? { clientId: "", clientSecret: "" };
   return {
-    refresh: `${tokenData.refresh_token}|${clientId}|${clientSecret}|idc`,
+    refresh: encodeKiroRefresh({
+      token: tokenData.refresh_token,
+      fields: [clientId, clientSecret],
+      authMethod: "idc",
+      region,
+    }),
     access: tokenData.access_token,
     expires: expiresAt,
     clientId,
@@ -275,7 +286,7 @@ export function saveKiroCliCredentials(creds: KiroCredentials): void {
   const dbPath = getKiroCliDbPath();
   if (!dbPath) return;
 
-  const rawRefreshToken = creds.refresh.split("|")[0] ?? "";
+  const rawRefreshToken = parseKiroRefresh(creds.refresh).token;
   // Our expires has a 5-min buffer subtracted; restore approximate actual expiry for kiro-cli
   const expiresAt = new Date(creds.expires + 5 * 60 * 1000).toISOString();
   const tokenKeys = TOKEN_KEY_BY_AUTH_METHOD[creds.authMethod] ?? [];

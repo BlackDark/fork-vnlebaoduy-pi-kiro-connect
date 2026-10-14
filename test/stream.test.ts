@@ -745,7 +745,6 @@ describe("Feature 9: Streaming Integration", () => {
     }
   });
 
-
   it("fails before inference when profile discovery returns no profile", async () => {
     resetProfileArnCache(false);
     // Both canonical management regions return an empty profile list (#104):
