@@ -600,8 +600,7 @@ function streamKiroWithUsageTracking(
       const cliCreds = getKiroCliCredentials() ?? getKiroCliCredentialsAllowExpired();
       const cliProfileArn = cliCreds?.access === accessToken ? cliCreds.profileArn : undefined;
       const envProfileArn = process.env.KIRO_PROFILE_ARN?.trim();
-      const initialProfileArn =
-        envProfileArn || optionProfileArn || modelMetadata.kiroProfileArn || cliProfileArn;
+      const initialProfileArn = envProfileArn || optionProfileArn || modelMetadata.kiroProfileArn || cliProfileArn;
       let profileArn: string;
       try {
         profileArn =
