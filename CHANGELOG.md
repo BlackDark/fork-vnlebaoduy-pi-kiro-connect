@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-14
 ### Fixed
 
 - A Kiro login outside `us-east-1` no longer fails to refresh once pi has persisted it. pi keeps only `access`/`refresh`/`expires`, so the SSO region was lost and IdC/desktop refresh went to `us-east-1`. The region is now appended after the auth-method marker in the refresh string (`src/refresh-token.ts`); older strings still parse.
