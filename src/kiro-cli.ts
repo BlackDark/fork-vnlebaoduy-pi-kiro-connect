@@ -1,7 +1,7 @@
 // ABOUTME: Reads and writes credentials from the kiro-cli SQLite database.
 // ABOUTME: Provides fallback auth and write-back to keep kiro-cli in sync after refresh.
 
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir, platform } from "node:os";
@@ -52,7 +52,7 @@ function queryKiroCliDb(dbPath: string, sql: string): string | undefined {
   }
 
   try {
-    const result = execSync(`sqlite3 -json "${dbPath}" "${sql}"`, {
+    const result = execFileSync("sqlite3", ["-json", dbPath, sql], {
       encoding: "utf-8",
       timeout: 5000,
       stdio: ["pipe", "pipe", "pipe"],
@@ -80,7 +80,7 @@ function execKiroCliDb(dbPath: string, sql: string): boolean {
   }
 
   try {
-    execSync(`sqlite3 "${dbPath}"`, {
+    execFileSync("sqlite3", [dbPath], {
       input: sql,
       encoding: "utf-8",
       timeout: 5000,
