@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-10-14
+
+### Fixed
+
+- `max` reasoning no longer gets the smallest prompt-injected thinking budget (10000, same as `low`); it now matches `xhigh` (50000). Only affects models without a structured effort field.
+
+### Changed
+
+- The `sqlite3` CLI fallback for kiro-cli's database now runs without a shell, so the DB path and SQL are never shell-interpolated.
+- Removed unused imports and `any` casts flagged by biome.
+
 ## [0.15.0] - 2026-10-14
 ### Fixed
 
