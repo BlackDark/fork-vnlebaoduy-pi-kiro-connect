@@ -247,7 +247,7 @@ describe("Feature 9: Streaming Integration", () => {
 
   it("does not turn tool-shaped prose into calls when recovery is disabled", async () => {
     const prose = '[Called read with args: {"path":"example.txt"}]';
-    vi.stubGlobal("fetch", mockFetchOk(JSON.stringify({ content: prose }) + '{"contextUsagePercentage":5}'));
+    vi.stubGlobal("fetch", mockFetchOk(`${JSON.stringify({ content: prose })}{"contextUsagePercentage":5}`));
     const model = { ...makeModel({ reasoning: false }), recoverTextToolCalls: false };
     const events = await collect(streamKiro(model, makeContext(), { apiKey: "synthetic-token" }));
     const done = events.find((event) => event.type === "done");
@@ -501,6 +501,26 @@ describe("Feature 9: Streaming Integration", () => {
     expect(body.additionalModelRequestFields).toBeUndefined();
     expect(body.conversationState.currentMessage.userInputMessage.content).toContain(
       "<max_thinking_length>50000</max_thinking_length>",
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["low", 10000],
+    ["medium", 20000],
+    ["high", 30000],
+    ["xhigh", 50000],
+    ["max", 50000],
+  ] as const)("maps prompt-injected %s reasoning to a %i token budget", async (reasoning, budget) => {
+    const mockFetch = mockFetchOk('{"content":"Hi"}{"contextUsagePercentage":10}');
+    vi.stubGlobal("fetch", mockFetch);
+
+    await collect(streamKiro(makeModel(), makeContext(), { apiKey: "test-token", reasoning }));
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.conversationState.currentMessage.userInputMessage.content).toContain(
+      `<max_thinking_length>${budget}</max_thinking_length>`,
     );
 
     vi.unstubAllGlobals();

@@ -487,6 +487,10 @@ function resolveProviderContext(context: ProviderContext): {
   };
 }
 
+const DEFAULT_THINKING_BUDGET_TOKENS = 10000;
+/** `max` is never below `xhigh`; unlisted levels (minimal, low) use the default. */
+const THINKING_BUDGET_TOKENS: Record<string, number> = { medium: 20000, high: 30000, xhigh: 50000, max: 50000 };
+
 export function streamKiro(
   model: Model<Api>,
   context: ProviderContext,
@@ -685,14 +689,7 @@ function streamKiroWithUsageTracking(
       // present. Keep both controls: structured fields select effort, while these
       // markers preserve the <thinking> content consumed by ThinkingTagParser.
       if (thinkingEnabled && effortConfig?.field !== "reasoning") {
-        const budget =
-          options?.reasoning === "xhigh"
-            ? 50000
-            : options?.reasoning === "high"
-              ? 30000
-              : options?.reasoning === "medium"
-                ? 20000
-                : 10000;
+        const budget = THINKING_BUDGET_TOKENS[options?.reasoning ?? ""] ?? DEFAULT_THINKING_BUDGET_TOKENS;
         systemPrompt = `<thinking_mode>enabled</thinking_mode><max_thinking_length>${budget}</max_thinking_length>${systemPrompt ? `\n${systemPrompt}` : ""}`;
       }
       let retryCount = 0;
