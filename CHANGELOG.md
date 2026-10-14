@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Honor the explicit `KIRO_PROFILE_ARN` override before a profile projected into model metadata, so switching Kiro accounts does not keep sending requests with a stale model profile.
+
 ## [0.14.0] - 2026-10-07
 
 ### Added
