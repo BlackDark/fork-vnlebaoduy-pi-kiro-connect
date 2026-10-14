@@ -1,3 +1,4 @@
+import type { OAuthLoginCallbacks } from "@earendil-works/pi-ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getKiroCliSocialToken } from "../src/kiro-cli.js";
 import { getKiroIdeCredentials } from "../src/kiro-ide.js";
@@ -293,7 +294,9 @@ describe("Feature 3: OAuth — Token Refresh", () => {
   describe("loginKiroWithApiKey", () => {
     it("validates Kiro API key format", async () => {
       const { loginKiroWithApiKey } = await import("../src/oauth.js");
-      await expect(loginKiroWithApiKey({} as any, "invalid_key")).rejects.toThrow("Invalid API key format");
+      await expect(loginKiroWithApiKey({} as OAuthLoginCallbacks, "invalid_key")).rejects.toThrow(
+        "Invalid API key format",
+      );
     });
 
     it("fetches profile with GetProfile and returns apikey credentials", async () => {
@@ -304,7 +307,10 @@ describe("Feature 3: OAuth — Token Refresh", () => {
       });
       vi.stubGlobal("fetch", mockFetch);
 
-      const creds = await loginKiroWithApiKey({ onProgress: vi.fn() } as any, "ksk_test_key_12345");
+      const creds = await loginKiroWithApiKey(
+        { onProgress: vi.fn() } as unknown as OAuthLoginCallbacks,
+        "ksk_test_key_12345",
+      );
       expect(creds.access).toBe("ksk_test_key_12345");
       expect(creds.refresh).toBe("ksk_test_key_12345|apikey");
       expect((creds as KiroCredentials).authMethod).toBe("apikey");

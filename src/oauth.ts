@@ -12,7 +12,7 @@ import { withKiroAccountIdentity } from "./account-identity.js";
 import { formatSafeError } from "./debug.js";
 import { resolveApiRegion } from "./endpoints.js";
 import { getKiroIdeCredentials, getKiroIdeCredentialsAllowExpired } from "./kiro-ide.js";
-import { interactiveLogin, loginViaKiroCli } from "./login.js";
+import { loginViaKiroCli } from "./login.js";
 import { encodeKiroRefresh, kiroCredentialRegion, parseKiroRefresh } from "./refresh-token.js";
 
 export const SSO_OIDC_ENDPOINT = "https://oidc.us-east-1.amazonaws.com";
