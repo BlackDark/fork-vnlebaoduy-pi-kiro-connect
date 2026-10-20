@@ -33,6 +33,11 @@ export class KiroWebSearchError extends Error {
   }
 }
 
+/** Kiro rejects a longer `query` in `tools/call`; check before spending a request. */
+export const KIRO_WEB_SEARCH_MAX_QUERY_LENGTH = 200;
+/** Kiro answers in a few seconds; a hung connection must not pin the agent turn. */
+export const KIRO_WEB_SEARCH_TIMEOUT_MS = 20_000;
+
 interface InvokeMcpToolCallResponse {
   error?: { code?: number; message?: string } | null;
   result?: { content?: Array<{ type?: string; text?: string }> } | null;
@@ -42,7 +47,23 @@ interface InvokeMcpToolCallResponse {
  * Note: the `user-agent`/`x-amz-user-agent` strings are required — Kiro
  * answers 403 without them, even with a valid token.
  */
-export async function invokeKiroWebSearch(auth: KiroWebSearchAuth, query: string): Promise<KiroWebSearchResult[]> {
+export async function invokeKiroWebSearch(
+  auth: KiroWebSearchAuth,
+  query: string,
+  signal?: AbortSignal,
+): Promise<KiroWebSearchResult[]> {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) throw new KiroWebSearchError("Kiro web_search query must not be empty");
+  if (trimmedQuery.length > KIRO_WEB_SEARCH_MAX_QUERY_LENGTH) {
+    throw new KiroWebSearchError(
+      `Kiro web_search query must be ${KIRO_WEB_SEARCH_MAX_QUERY_LENGTH} characters or fewer (got ${trimmedQuery.length})`,
+    );
+  }
+  if (signal?.aborted) throw new KiroWebSearchError("Kiro web_search cancelled");
+  // The caller's abort (the agent turn ending) and the network deadline both apply.
+  const requestSignal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(KIRO_WEB_SEARCH_TIMEOUT_MS)])
+    : AbortSignal.timeout(KIRO_WEB_SEARCH_TIMEOUT_MS);
   const endpoint = new URL("mcp", getKiroEndpoints(auth.region).runtime).toString();
   const mid = randomUUID().replace(/-/g, "");
   const ua = `aws-sdk-rust/1.0.0 ua/2.1 os/other lang/rust api/codewhispererstreaming#1.28.3 m/E app/AmazonQ-For-CLI md/appVersion-1.28.3-${mid}`;
@@ -65,8 +86,9 @@ export async function invokeKiroWebSearch(auth: KiroWebSearchAuth, query: string
       id: randomUUID(),
       method: "tools/call",
       profileArn: auth.profileArn,
-      params: { name: "web_search", arguments: { query } },
+      params: { name: "web_search", arguments: { query: trimmedQuery } },
     }),
+    signal: requestSignal,
   });
 
   if (!response.ok) {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { invokeKiroWebSearch, KiroWebSearchError } from "../src/web-search.js";
+import { invokeKiroWebSearch, KIRO_WEB_SEARCH_MAX_QUERY_LENGTH, KiroWebSearchError } from "../src/web-search.js";
 
 const auth = {
   accessToken: "test-access-token",
@@ -85,5 +85,57 @@ describe("Kiro web_search (InvokeMCP)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(invokeKiroWebSearch(auth, "q")).rejects.toThrow(KiroWebSearchError);
+  });
+
+  it("rejects a query Kiro would refuse before spending a request", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(invokeKiroWebSearch(auth, "x".repeat(KIRO_WEB_SEARCH_MAX_QUERY_LENGTH + 1))).rejects.toThrow(
+      /200 characters or fewer/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("trims the query it sends", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          error: null,
+          result: { content: [{ type: "text", text: JSON.stringify({ results: [] }) }] },
+        }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await invokeKiroWebSearch(auth, "  kiro news  ");
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).params.arguments.query).toBe("kiro news");
+  });
+
+  it("cancels before sending when the caller's signal is already aborted", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(invokeKiroWebSearch(auth, "q", controller.signal)).rejects.toThrow(/cancelled/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("gives fetch a signal so the request dies with the agent turn", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          error: null,
+          result: { content: [{ type: "text", text: JSON.stringify({ results: [] }) }] },
+        }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await invokeKiroWebSearch(auth, "q", new AbortController().signal);
+
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
   });
 });
