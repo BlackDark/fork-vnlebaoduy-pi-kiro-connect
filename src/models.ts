@@ -537,12 +537,11 @@ export function mapKiroCatalogModels(catalogModels: KiroCatalogModel[], region: 
       api: "kiro-api",
       provider: "kiro",
       baseUrl: getKiroEndpoints(region).runtime,
-      // Deliberately schema-only, matching pre-change behavior exactly: when a schema
-      // exists the resolver returns deriveKiroEffort(schema), and when it does not the
-      // family-marker guess decides. The fallback tier feeds the ladders, not this flag.
+      // With a schema it alone decides. Without one, a known-model effort entry or the
+      // family-marker guess does, so schema-less Haiku 5.5 still gets its effort field.
       reasoning:
         (schema !== undefined && effortConfig !== undefined) ||
-        (schema === undefined && hasReasoningFamilyFallback(id)),
+        (schema === undefined && (effortConfig !== undefined || hasReasoningFamilyFallback(id))),
       ...(thinkingLevelMap ? { thinkingLevelMap } : {}),
       ...(thinking ? { thinking } : {}),
       input: existing ? [...existing.input] : hasVerifiedImageInput(kiroModelId) ? ["text", "image"] : ["text"],
