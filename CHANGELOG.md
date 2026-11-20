@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.3] - 2026-11-20
+
+### Fixed
+
+- Schema-less fallback now knows Claude Opus 5 / 5.5, Sonnet 5.5, Haiku 5.5 and Fable 5.1 (all five effort levels, `output_config` + adaptive thinking). Before, they got only the legacy thinking tag and `xhigh`/`max` clamped to `high`.
+- A schema-less model with a known effort entry is now marked `reasoning: true`, so Haiku 5.5 exposes thinking levels.
+
+### Added
+
+- `test/effort.test.ts` covering the fallback table and level mapping.
+
 ## [0.15.2] - 2026-10-29
 
 ### Fixed
