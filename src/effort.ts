@@ -31,6 +31,11 @@ const CLAUDE_EXTENDED_EFFORT_MODELS = new Set([
   "claude-opus-4.7",
   "claude-sonnet-5",
   "claude-fable-5",
+  "claude-fable-5.1",
+  "claude-opus-5",
+  "claude-opus-5.5",
+  "claude-sonnet-5.5",
+  "claude-haiku-5.5",
 ]);
 const CLAUDE_MAX_EFFORT_MODELS = new Set([
   "claude-opus-4.6",
