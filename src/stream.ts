@@ -37,6 +37,7 @@ import { type KiroErrorData, type KiroUsageData, parseKiroEvent, parseKiroExcept
 import {
   addPlaceholderTools,
   assertHistoryWithinLimit,
+  ensureToolCatalog,
   HISTORY_LIMIT,
   HISTORY_LIMIT_CONTEXT_WINDOW,
   prepareHistory,
@@ -870,14 +871,11 @@ function streamKiroWithUsageTracking(
         // an "advisor-style" call that inherits a tool-rich conversation but
         // declares no current tools is rejected by Kiro as "Improperly formed
         // request" because history references toolUses with no tool catalog.
-        let uimc: { toolResults?: KiroToolResult[]; tools?: KiroToolSpec[] } | undefined;
+        let uimc: { toolResults?: KiroToolResult[]; tools?: KiroToolSpec[] };
         const baseTools = currentTools.length ? convertToolsToKiro(currentTools) : [];
-        const finalTools = history.length > 0 ? addPlaceholderTools(baseTools, history) : baseTools;
-        if (currentToolResults.length > 0 || finalTools.length > 0) {
-          uimc = {};
-          if (currentToolResults.length > 0) uimc.toolResults = currentToolResults;
-          if (finalTools.length > 0) uimc.tools = finalTools;
-        }
+        const finalTools = ensureToolCatalog(history.length > 0 ? addPlaceholderTools(baseTools, history) : baseTools);
+        uimc = { tools: finalTools };
+        if (currentToolResults.length > 0) uimc.toolResults = currentToolResults;
         if (firstMsg?.role === "user") {
           const imgs = extractImages(firstMsg);
           if (imgs.length > 0) currentImages = convertImagesToKiro(imgs as ImageContent[]);
@@ -922,7 +920,7 @@ function streamKiroWithUsageTracking(
           content: currentContent,
           modelId: kiroModelId,
           origin: "KIRO_CLI",
-          ...(uimc ? { userInputMessageContext: uimc } : {}),
+          userInputMessageContext: uimc,
         });
         const repair = repairKiroConversation(conversationEntries);
         if (repair.diagnostics.length > 0) {
@@ -951,7 +949,7 @@ function streamKiroWithUsageTracking(
         // the backend rejects — straight back onto the wire.
         let wireHistory: KiroHistoryEntry[];
         let wireContent: string;
-        let wireUimc: typeof uimc;
+        let wireUimc: typeof uimc | undefined;
         if (repairedCurrent) {
           wireHistory = repair.entries.slice(0, -1);
           wireContent = repairedCurrent.content;
@@ -962,7 +960,7 @@ function streamKiroWithUsageTracking(
           // catalog, and give the empty turn the neutral prompt (step 5).
           wireHistory = [];
           wireContent = currentContent || EMPTY_CONTENT_PLACEHOLDER;
-          wireUimc = uimc?.tools?.length ? { tools: uimc.tools } : undefined;
+          wireUimc = uimc.tools?.length ? { tools: uimc.tools } : undefined;
         }
         if (repair.remaining.length > 0) {
           const structural = repair.remaining.filter((e) => isKiroToolStructureRule(e.rule));

@@ -1985,7 +1985,7 @@ describe("Feature 9: Streaming Integration", () => {
   // MUTATION PROBE: change `wireUimc = repairedCurrent.userInputMessageContext`
   // to `... ?? uimc` in stream.ts and this goes red — the stripped orphan is put
   // straight back onto the wire.
-  it("sends no tool context at all when repair strips the only results", async () => {
+  it("sends only the placeholder tool when repair strips the only results", async () => {
     const settledAssistant: AssistantMessage = {
       role: "assistant",
       content: [{ type: "text", text: "Done." }],
@@ -2020,7 +2020,12 @@ describe("Feature 9: Streaming Integration", () => {
 
     const sent = JSON.parse(mockFetch.mock.calls[0][1].body as string);
     const current = sent.conversationState.currentMessage.userInputMessage;
-    expect(current.userInputMessageContext).toBeUndefined();
+    expect(current.userInputMessageContext.toolResults).toBeUndefined();
+    expect(
+      current.userInputMessageContext.tools.map(
+        (t: { toolSpecification: { name: string } }) => t.toolSpecification.name,
+      ),
+    ).toEqual(["noop"]);
     // With no payload left, step 5 gives the turn the neutral prompt.
     expect(current.content).toBe(EMPTY_CONTENT_PLACEHOLDER);
     const conversation = [...(sent.conversationState.history ?? []), { userInputMessage: current }];
@@ -2515,9 +2520,9 @@ describe("Feature 9: Streaming Integration", () => {
     vi.unstubAllGlobals();
   });
 
-  it("omits userInputMessageContext.tools when context.tools is [] and history has no tool uses", async () => {
-    // Plain user-only conversation with no current tools must not emit a tools
-    // array — preserves prior behavior for the genuinely tool-less case.
+  it("sends a single placeholder tool when context.tools is [] and history has no tool uses", async () => {
+    // Kiro refuses tool-less requests on Haiku 5.5 (CYBER content filter), so a
+    // plain user-only conversation still declares one inert tool.
     const context: Context = {
       systemPrompt: "You are helpful",
       messages: [{ role: "user", content: "Hello", timestamp: ts }],
@@ -2532,7 +2537,8 @@ describe("Feature 9: Streaming Integration", () => {
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     const uimc = body.conversationState.currentMessage.userInputMessage.userInputMessageContext;
-    expect(uimc?.tools).toBeUndefined();
+    expect(uimc.tools.map((t: { toolSpecification: { name: string } }) => t.toolSpecification.name)).toEqual(["noop"]);
+    expect(uimc.toolResults).toBeUndefined();
 
     vi.unstubAllGlobals();
   });

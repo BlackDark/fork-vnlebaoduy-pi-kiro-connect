@@ -133,3 +133,20 @@ export function addPlaceholderTools(tools: KiroToolSpec[], history: KiroHistoryE
     })),
   ];
 }
+
+/**
+ * Kiro rejects tool-less requests on some models (Haiku 5.5 answers every
+ * prompt with a CYBER content-filter refusal). A request that declares no tool
+ * at all therefore carries one inert spec.
+ */
+export const NOOP_TOOL_SPEC: KiroToolSpec = {
+  toolSpecification: {
+    name: "noop",
+    description: "Unused placeholder. Never call this tool.",
+    inputSchema: { json: { type: "object" as const, properties: {} } },
+  },
+};
+
+export function ensureToolCatalog(tools: KiroToolSpec[]): KiroToolSpec[] {
+  return tools.length > 0 ? tools : [NOOP_TOOL_SPEC];
+}
